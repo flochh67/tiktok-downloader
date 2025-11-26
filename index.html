@@ -3,118 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Downloader Sederhana</title>
+    <title>TikTok Downloader (Public API)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
     <style>
-        body { background-color: #f8f9fa; }
-        .card-custom {
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            background: white;
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .result-box { display: none; margin-top: 20px; }
-        video { width: 100%; border-radius: 10px; }
+        .card-custom {
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+        }
+        .input-group-text {
+            background-color: white;
+            border-right: none;
+        }
+        .form-control {
+            border-left: none;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        #resultArea {
+            display: none; /* Sembunyikan hasil saat awal */
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .video-thumb {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
 
-<div class="container py-5">
+<div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-6 col-lg-5">
             <div class="card card-custom p-4">
-                <h3 class="text-center mb-4 text-primary fw-bold">TikTok Downloader</h3>
-                
-                <div class="mb-3">
-                    <label for="tiktokUrl" class="form-label">Tempel Link TikTok di sini:</label>
-                    <input type="text" class="form-control" id="tiktokUrl" placeholder="https://www.tiktok.com/@user/video/..." required>
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark"><i class="bi bi-tiktok text-danger"></i> TT Downloader</h2>
+                    <p class="text-muted small">Tanpa Watermark • Gratis • Tanpa Login</p>
                 </div>
 
-                <button onclick="downloadVideo()" class="btn btn-primary w-100 py-2" id="btnDownload">
-                    Download Video
+                <div class="mb-3">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                        <input type="text" class="form-control" id="tiktokUrl" placeholder="Tempel link TikTok di sini...">
+                    </div>
+                </div>
+
+                <button onclick="fetchVideo()" class="btn btn-dark w-100 py-2 fw-bold" id="btnDownload">
+                    <i class="bi bi-cloud-arrow-down-fill me-2"></i> Download Sekarang
                 </button>
 
-                <div id="resultArea" class="result-box text-center">
+                <div id="statusMsg" class="text-center mt-3 small text-secondary"></div>
+
+                <div id="resultArea" class="mt-4">
                     <hr>
-                    <h5 id="videoTitle" class="mb-3">Judul Video</h5>
-                    <div class="ratio ratio-16x9 mb-3">
-                         <video id="videoPlayer" controls>
-                            Your browser does not support the video tag.
+                    <div class="d-flex align-items-center mb-3">
+                        <img id="authorAvatar" src="" class="rounded-circle me-2" width="40" height="40" alt="User">
+                        <div>
+                            <h6 id="authorName" class="m-0 fw-bold">Username</h6>
+                            <small class="text-muted">Pemilik Video</small>
+                        </div>
+                    </div>
+
+                    <p id="videoDesc" class="small text-muted mb-3 text-truncate">Caption video...</p>
+
+                    <div class="ratio ratio-16x9 mb-3 rounded overflow-hidden shadow-sm">
+                        <video id="videoPlayer" controls class="w-100 h-100" style="object-fit: cover; background: black;">
+                            Browser Anda tidak mendukung tag video.
                         </video>
                     </div>
-                    <a id="downloadLink" href="#" class="btn btn-success" download target="_blank">Simpan Video (MP4)</a>
+
+                    <div class="d-grid gap-2">
+                        <a id="downloadBtn" href="#" target="_blank" class="btn btn-success">
+                            <i class="bi bi-download me-2"></i> Simpan Video (No WM)
+                        </a>
+                        <a id="musicBtn" href="#" target="_blank" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-music-note-beamed me-2"></i> Download Musik
+                        </a>
+                    </div>
                 </div>
-                
-                <p id="statusMsg" class="text-center mt-3 text-muted"></p>
+
+            </div>
+            <div class="text-center mt-3 text-white-50 small">
+                &copy; 2024 Simple GitHub Downloader
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    async function downloadVideo() {
+    async function fetchVideo() {
         const urlInput = document.getElementById('tiktokUrl').value;
+        const btn = document.getElementById('btnDownload');
         const statusMsg = document.getElementById('statusMsg');
         const resultArea = document.getElementById('resultArea');
-        const btn = document.getElementById('btnDownload');
 
+        // Validasi input
         if (!urlInput) {
-            alert("Mohon masukkan link TikTok!");
+            statusMsg.innerHTML = "<span class='text-danger'>Link tidak boleh kosong!</span>";
             return;
         }
 
-        // Tampilan Loading
+        // Reset UI saat loading
         btn.disabled = true;
-        btn.innerText = "Sedang memproses...";
-        statusMsg.innerText = "Menghubungi server...";
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memproses...';
+        statusMsg.innerText = "Sedang mencari video...";
         resultArea.style.display = 'none';
 
-        // --- KONFIGURASI API ---
-        // PENTING: Di sinilah Anda memasukkan logika API.
-        // Karena GitHub Static, kita harus fetch ke layanan lain.
-        // Contoh di bawah ini adalah PSEUDO-CODE untuk RapidAPI.
-        
-        const apiKey = 'MASUKKAN_API_KEY_RAPIDAPI_ANDA_DISINI'; 
-        const apiHost = 'tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com';
-        const apiUrl = `https://${apiHost}/vid/index?url=${encodeURIComponent(urlInput)}`;
-
         try {
-            // Uncomment baris di bawah jika Anda sudah punya API Key dari RapidAPI
-            /*
+            // --- LOGIKA UTAMA (TikWM API) ---
+            // Kita menggunakan URL API TikWM
+            const apiUrl = 'https://www.tikwm.com/api/';
+
+            // API ini membutuhkan data dikirim sebagai Form Data (POST)
+            const formData = new FormData();
+            formData.append('url', urlInput);
+            formData.append('count', 12);
+            formData.append('cursor', 0);
+            formData.append('web', 1);
+            formData.append('hd', 1);
+
             const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'X-RapidAPI-Key': apiKey,
-                    'X-RapidAPI-Host': apiHost
-                }
+                method: 'POST',
+                body: formData
             });
-            */
 
-            // --- SIMULASI (Agar codingan ini terlihat bekerja tanpa API Key asli) ---
-            // Kita akan berpura-pura sukses setelah 2 detik
-            await new Promise(r => setTimeout(r, 2000));
-            
-            // Anggaplah ini data yang didapat dari API
-            const fakeData = {
-                title: "Contoh Video TikTok",
-                video_url: "https://www.w3schools.com/html/mov_bbb.mp4" // Video sampel
-            };
-            
-            // --- END SIMULASI ---
+            const res = await response.json();
 
-            // Menampilkan Hasil (Gunakan data asli 'response' jika sudah ada API)
-            document.getElementById('videoTitle').innerText = fakeData.title || "Video TikTok";
-            document.getElementById('videoPlayer').src = fakeData.video_url;
-            document.getElementById('downloadLink').href = fakeData.video_url;
-            
-            resultArea.style.display = 'block';
-            statusMsg.innerText = "";
+            // Cek apakah response sukses (code 0 biasanya berarti sukses di TikWM)
+            if (res.code === 0) {
+                const data = res.data;
+
+                // Mengisi data ke HTML
+                document.getElementById('authorName').innerText = data.author.nickname;
+                document.getElementById('authorAvatar').src = data.author.avatar;
+                document.getElementById('videoDesc').innerText = data.title;
+                
+                // Menyiapkan Player & Link Download
+                // 'play' adalah link video tanpa watermark
+                document.getElementById('videoPlayer').src = data.play; 
+                document.getElementById('downloadBtn').href = data.play;
+                document.getElementById('musicBtn').href = data.music;
+
+                // Tampilkan hasil
+                resultArea.style.display = 'block';
+                statusMsg.innerText = "";
+            } else {
+                throw new Error("Video tidak ditemukan atau link salah.");
+            }
 
         } catch (error) {
             console.error(error);
-            statusMsg.innerText = "Gagal mengambil video. Pastikan link benar atau API limit habis.";
+            statusMsg.innerHTML = `<span class='text-danger'>Gagal: ${error.message}</span>`;
         } finally {
+            // Kembalikan tombol ke kondisi semula
             btn.disabled = false;
-            btn.innerText = "Download Video";
+            btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill me-2"></i> Download Sekarang';
         }
     }
 </script>

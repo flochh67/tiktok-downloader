@@ -114,24 +114,19 @@
         const statusMsg = document.getElementById('statusMsg');
         const resultArea = document.getElementById('resultArea');
 
-        // Validasi input
         if (!urlInput) {
             statusMsg.innerHTML = "<span class='text-danger'>Link tidak boleh kosong!</span>";
             return;
         }
 
-        // Reset UI saat loading
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memproses...';
         statusMsg.innerText = "Sedang mencari video...";
         resultArea.style.display = 'none';
 
         try {
-            // --- LOGIKA UTAMA (TikWM API) ---
-            // Kita menggunakan URL API TikWM
             const apiUrl = 'https://www.tikwm.com/api/';
-
-            // API ini membutuhkan data dikirim sebagai Form Data (POST)
+            
             const formData = new FormData();
             formData.append('url', urlInput);
             formData.append('count', 12);
@@ -146,33 +141,56 @@
 
             const res = await response.json();
 
-            // Cek apakah response sukses (code 0 biasanya berarti sukses di TikWM)
             if (res.code === 0) {
                 const data = res.data;
 
-                // Mengisi data ke HTML
+                // --- BAGIAN PERBAIKAN UTAMA ---
+                // Kita cek apakah link dimulai dengan 'http'. Jika tidak, tambahkan domain tikwm.
+                let videoUrl = data.play;
+                let musicUrl = data.music;
+                let avatarUrl = data.author.avatar;
+
+                // Fungsi kecil untuk memperbaiki link
+                const fixUrl = (url) => {
+                    if (!url) return '';
+                    if (url.startsWith('http')) return url;
+                    return `https://www.tikwm.com${url}`;
+                };
+
+                videoUrl = fixUrl(videoUrl);
+                musicUrl = fixUrl(musicUrl);
+                avatarUrl = fixUrl(avatarUrl);
+                // -------------------------------
+
                 document.getElementById('authorName').innerText = data.author.nickname;
-                document.getElementById('authorAvatar').src = data.author.avatar;
+                document.getElementById('authorAvatar').src = avatarUrl;
                 document.getElementById('videoDesc').innerText = data.title;
                 
-                // Menyiapkan Player & Link Download
-                // 'play' adalah link video tanpa watermark
-                document.getElementById('videoPlayer').src = data.play; 
-                document.getElementById('downloadBtn').href = data.play;
-                document.getElementById('musicBtn').href = data.music;
+                document.getElementById('videoPlayer').src = videoUrl; 
+                
+                // Update tombol download
+                const downloadBtn = document.getElementById('downloadBtn');
+                downloadBtn.href = videoUrl;
+                
+                // Tambahkan atribut agar browser tidak memblokir (CORS)
+                downloadBtn.setAttribute('target', '_blank');
+                downloadBtn.setAttribute('rel', 'noreferrer');
 
-                // Tampilkan hasil
+                const musicBtn = document.getElementById('musicBtn');
+                musicBtn.href = musicUrl;
+                musicBtn.setAttribute('target', '_blank');
+                musicBtn.setAttribute('rel', 'noreferrer');
+
                 resultArea.style.display = 'block';
                 statusMsg.innerText = "";
             } else {
-                throw new Error("Video tidak ditemukan atau link salah.");
+                throw new Error("Video tidak ditemukan. Pastikan akun tidak diprivat.");
             }
 
         } catch (error) {
             console.error(error);
             statusMsg.innerHTML = `<span class='text-danger'>Gagal: ${error.message}</span>`;
         } finally {
-            // Kembalikan tombol ke kondisi semula
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-cloud-arrow-down-fill me-2"></i> Download Sekarang';
         }
